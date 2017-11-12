@@ -1,0 +1,124 @@
+# _*_coding:utf-8_*_
+'''
+Version 1.1.0
+Date  2017-09-29
+@Author Cheney
+'''
+
+
+# 该文件从属于s01tree.py, 主要是创建一个Plotter 文件用于输出 画出的决策树图
+
+
+import matplotlib.pyplot as plt
+# 定义树的box 和 箭头的形式
+descisionNode = dict(boxstyle="sawtooth",fc="0.8")
+leafNode = dict(boxstyle="round4", fc="0.8")
+# 专有符号 只能是"<-"
+arrow_args = dict(arrowstyle="<-")
+
+
+#001 画注释且带箭头
+def plotNode(nodeTxt,centerPt, parentPt, nodeType):
+    createPlot.ax1.annotate(nodeTxt,xy=parentPt,xycoords="axes fraction",xytext=centerPt,textcoords="axes fraction",\
+                            va="center",ha="center",bbox=nodeType,arrowprops=arrow_args)
+
+
+#002 获取树叶子的函数
+def getNumLeafs(myTrees):
+    numLeafs = 0
+    # The orignal firstStr is suitable for Python2.7 , but in Python 3.0+ it should use update firstStr
+    # In the follow program, all the expression "XX.keys()[0]" should change as "list(xx.keys())[0]"
+    # firstStr = myTrees.keys()[0]    #(Orignal)
+    firstStr = list(myTrees.keys())[0]
+    secondDict = myTrees[firstStr]
+    for key in secondDict.keys():
+        #该出判断确认是否是叶子节点，若该节点是dict类型 则为叶子，否则不是
+        if type(secondDict[key]).__name__ == "dict":
+            numLeafs += getNumLeafs(secondDict[key])
+        else:
+            numLeafs += 1
+
+    return numLeafs
+
+#003 计算树的深度函数
+def getTreeDepth(myTree):
+    maxDepth = 0
+    firstStr = list(myTree.keys())[0]
+    secondDict = myTree[firstStr]
+    for key in secondDict.keys():
+        if type(secondDict[key]).__name__ == "dict":
+            thisDepth = 1 +getTreeDepth(secondDict[key])
+        else:
+            thisDepth = 1
+        if thisDepth > maxDepth:
+            maxDepth = thisDepth
+
+    return maxDepth
+
+
+#004 检索树的函数
+def retrieveTree(i):
+    listOfTrees =[
+        {'No surfacing': {0: 'No', 1: {'Flippers': {0: 'No', 1: 'Yes'}}}},
+        {'No surfacing': {0: 'No', 1: {'Flippers': {0: {'head': { 0: 'no', 1: 'Yes'}}, 1:'no'}}}}
+    ]
+
+    return listOfTrees[i]
+
+# 测试 检索树函数
+# print retrieveTree(1)
+# myTree = retrieveTree(0)
+# print  getNumLeafs(myTree)
+
+#005 建立plotTree 函数————子节点和父节点函数
+def plotMidText(cntrPt, parentPt, txtString):
+    xMid = (parentPt[0] - cntrPt[0])/2.0 + cntrPt[0]
+    yMid = (parentPt[1] - cntrPt[1])/2.0 + cntrPt[1]
+    createPlot.ax1.text(xMid,yMid, txtString)
+
+#006 获取树的宽度和深度
+def plotTree(myTree, parentPt, nodeTxt):
+    numLeafs = getNumLeafs(myTree)
+    depth = (myTree)
+    firstStr = list(myTree.keys())[0]
+    cntrPt = (plotTree.xOff + (1.0 + float(numLeafs))/2.0/plotTree.totalW,plotTree.yOff)
+    plotMidText(cntrPt, parentPt, nodeTxt)
+    plotNode(firstStr,cntrPt,parentPt, descisionNode)
+    secondDict = myTree[firstStr]
+    plotTree.yOff = plotTree.yOff - 1.0/plotTree.totalD
+    for key in secondDict.keys():
+        if type(secondDict[key]).__name__ == "dict":
+            plotTree(secondDict[key],cntrPt,str(key))
+        else:
+            plotTree.xOff = plotTree.xOff + 1.0/plotTree.totalW
+            plotNode(secondDict[key],(plotTree.xOff,plotTree.yOff),cntrPt, leafNode)
+            plotMidText((plotTree.xOff, plotTree.yOff), cntrPt, str(key))
+    plotTree.yOff = plotTree.yOff + 1.0/plotTree.totalD
+
+
+#007 绘制决策树的图
+def createPlot(inTree):
+    fig = plt.figure(1,facecolor="white")
+    fig.clf()
+    axprops = dict(xticks=[], yticks=[])
+    createPlot.ax1 = plt.subplot(111, frameon=False, **axprops)
+    plotTree.totalW = float(getNumLeafs(inTree))
+    plotTree.totalD = float(getTreeDepth(inTree))
+    plotTree.xOff = -0.5/plotTree.totalW
+    plotTree.yOff = 1.0
+    plotTree(inTree, (0.5,1.0),"")
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
