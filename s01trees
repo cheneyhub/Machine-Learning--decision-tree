@@ -1,0 +1,192 @@
+# _*_coding:utf-8_*_
+'''
+Version 0.1.0
+Date  2017-09-29
+@Author Cheney
+'''
+
+# 《机器学习实战》第三章 Decision Tree算法
+
+
+from math import log
+import operator
+from s03treesPlotter import retrieveTree, createPlot
+
+
+#001 随机创建一个数组数据集合用于实验测试
+def createDataSet():
+    dataSet = [
+        [1,1,'Yes'],
+        [1,0,'No'],
+        [1, 1, 'Yes'],
+        [0,1,'No'],
+        [0,1,'No']
+        [1, 1, 'Yes'],
+        [0, 1, 'No']
+        [1, 1, 'Yes'],
+        [1, 1, 'Yes']    ]
+    labels = ['No surfacing','Flippers']
+
+    return dataSet, labels
+
+
+#002 如何利用python 计算信息熵(entropy) 下面函数是根据给定的函数计算香农熵(信息熵)
+def calShannonEnt(dataSet):
+    numEntries = len(dataSet)
+    labelCounts = {}
+    for featVec in dataSet:
+        currentLabel = featVec[-1]     # 矩阵for 循环的时候单值建议用[-1] 取值
+        if currentLabel not in labelCounts.keys():
+            labelCounts[currentLabel] = 0
+        labelCounts[currentLabel] += 1
+
+    # 计算信息熵的值 根据计算公式  H = - sum(p(xi) * log(xi,2))
+    shannonEnt = 0.0
+    for key in labelCounts:
+        prob = float(labelCounts[key])/numEntries
+        shannonEnt -= prob * log(prob,2)
+
+    return shannonEnt
+
+
+# 测试运行测试以上两个程序
+# myData,myLabels = createDataSet()
+# print myData, myLabels
+# print 'Output', calShannonEnt(myData)
+
+#003 划分数据集函数
+def splitDataSet(dataSet, axis, value):
+    #创建一个新的list对象用于返回划分好的数据集
+    retDataSet = []
+    for featvec in dataSet:
+        if featvec[axis] == value:
+            #抽取数据 原理是当矩阵中某个数等于value  将该数前的数和之后的数分别组成新的数存入retDataSet
+            reducedFeatvec = featvec[:axis]
+            # 将分开的两组数组成一个列表 用extend 是分开每个元祖，不用append 是因为append 生成一个集合
+            reducedFeatvec.extend(featvec[axis+1:])
+            retDataSet.append(reducedFeatvec)
+
+    return retDataSet
+
+#测试运行以上函数
+# myData,myLabels = createDataSet()
+# print splitDataSet(myData,1,1)
+# print splitDataSet(myData,1,0)
+
+#004 选择最好的数据划分方式函数
+def chooseBestFeatureToSplit(dataSet):
+    numFeatures = len(dataSet[0]) - 1
+    baseEntropy = calShannonEnt(dataSet)
+    bestInfoGain = 0.0; bestFeature = -1
+    for i in range(numFeatures):
+        # 创建唯一的分类标签列表
+        featList = [example[i] for example in dataSet]
+        uniqueVals = set(featList)
+        newEntropy = 0.0
+        #计算每种划分方式的信息熵
+        for value in uniqueVals:
+            subDataSet = splitDataSet(dataSet,i,value)
+            prob = len(subDataSet)/float(len(dataSet))
+            newEntropy += prob * calShannonEnt(subDataSet)
+        # 计算最好的信息增益
+        infoGain = baseEntropy - newEntropy
+        if (infoGain > bestInfoGain):
+            bestInfoGain = infoGain
+            bestFeature = i
+
+    return bestFeature
+
+# 005 类标签不是唯一时，采用多数表决的方法决定该叶子节点的分类
+def majorityCnt(classList):
+    classCount = {}
+    for vote in classList:
+        if vote not in classCount.keys():
+            classCount[vote] = 0
+        classCount[vote] += 1
+    sortedClassCount = sorted(classCount.items(),key=operator.itemgetter(1),reverse=True)
+
+    return  sortedClassCount[0][0]
+
+#006 创建决策树的函数 该函数过程类似一个递归函数
+def createTree(dataSet,labels):
+    classList = [example[-1] for example in dataSet]
+    # 当class 相同的时候则直接退出
+    if classList.count(classList[0]) == len(classList):
+        return classList[0]
+    # 如果没有更多的特征值， 则返回主特征值
+    if len(dataSet[0]) == 1:
+        return majorityCnt(classList)
+
+    bestFeat = chooseBestFeatureToSplit(dataSet)
+    bestFeatLabel = labels[bestFeat]
+    myTree = {bestFeatLabel:{}}
+    del(labels[bestFeat])
+    featValues = [example[bestFeat] for example in dataSet]
+    uniqueVals = set(featValues)
+    for value in uniqueVals:
+        subLabels = labels[:]
+        myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet,bestFeat, value), subLabels)
+
+    return myTree
+
+# # 测试myTree函数
+# myData,myLabels = createDataSet()
+# print 'Hello', createTree(myData,myLabels)
+
+#007 对已经存在的决策树进行分类 函数
+def classify(inputTree, featLabels,testVec):
+    firstStr = inputTree.keys()[0]
+    secondDict = inputTree[firstStr]
+    featIndex = featLabels.index(firstStr)    # 将字符串label传给树
+    for key in secondDict.keys():
+        if testVec[featIndex] == key:
+            if type(secondDict[key]).__name__ == "dict":
+                classLabel = classify(secondDict[key], featLabels, testVec)
+            else:
+                classLabel = secondDict[key]
+
+    return classLabel
+
+# 测试函数
+# myData,myLabels = createDataSet()
+# myTree = retrieveTree(0)
+# print classify(myTree, myLabels,[1,0])
+# print 'haha',classify(myTree, myLabels,[1,1])
+
+
+
+# 储存和获取决策树  测试函数 主程序中没有使用该函数
+import pickle
+def storeTree(inputTree, filename):
+    fw = open(filename,"w")
+    pickle.dump(inputTree, fw)
+    fw.close()
+
+def grabTree(filename):
+    fr = open(filename)
+    return pickle.load(fr)
+
+# test the sample of store and grab function
+# myTree = retrieveTree(0)
+# storeTree(myTree,"classifierStorage.txt")
+# print = grabTree("classifierStorage.txt")
+
+# 运行主函数来生成决策树
+if __name__ == "__main__":
+    print ("The main function will starting: ")
+    fr = open("lenses.txt")
+    lenses = [sample.strip().split("\t") for sample in fr.readlines()]
+    lensesLabels = ['age','prescript','astigmatic','tearRate']
+    lensesTree = createTree(lenses, lensesLabels)
+    createPlot(lensesTree)
+    
+
+
+
+
+
+
+
+
+
+
