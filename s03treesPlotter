@@ -31,12 +31,16 @@ def getNumLeafs(myTrees):
     # firstStr = myTrees.keys()[0]    #(Orignal)
     firstStr = list(myTrees.keys())[0]
     secondDict = myTrees[firstStr]
-    for key in secondDict.keys():
+    # 可以尝试列表推导式
+    numLeafs += getNumLeafs(secondDict[key]) if type(secondDict[key]).__name__ == "dict" else numLeafs += 1 \
+    for key in secondDict.keys()
+        
+    #for key in secondDict.keys():
         #该出判断确认是否是叶子节点，若该节点是dict类型 则为叶子，否则不是
-        if type(secondDict[key]).__name__ == "dict":
-            numLeafs += getNumLeafs(secondDict[key])
-        else:
-            numLeafs += 1
+    #    if type(secondDict[key]).__name__ == "dict":
+    #        numLeafs += getNumLeafs(secondDict[key])
+    #    else:
+    #        numLeafs += 1
 
     return numLeafs
 
@@ -108,6 +112,8 @@ def createPlot(inTree):
     plotTree.yOff = 1.0
     plotTree(inTree, (0.5,1.0),"")
     plt.show()
+
+#This is end.
 
 
 
